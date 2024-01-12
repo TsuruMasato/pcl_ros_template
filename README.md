@@ -16,4 +16,4 @@ ROS node to extract environmental edge in 3D Point Cloud.
 
 # How to run
 
-$ `rosrun edge_detector_ros edge_detector_node`
+`$ rosrun edge_detector_ros edge_detector_node`
