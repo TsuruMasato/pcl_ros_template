@@ -13,13 +13,13 @@ int main(int argc, char** argv)
   // TODO: Add your code here
   ROS_INFO("[EdgeDetectorNode] Starting node");
 
-  ros::Rate loop_rate(10);
+  ros::Rate loop_rate(10);  // 10Hz
   // Spin the ROS node
 
   while (ros::ok())
   {
     ros::spinOnce();
-    loop_rate.sleep();
+    // loop_rate.sleep(); // Activate this line if your PC is poor.
   }
   
   ROS_INFO("[EdgeDetectorNode] Ending node");
