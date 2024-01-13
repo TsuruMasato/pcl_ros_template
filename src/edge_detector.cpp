@@ -84,22 +84,32 @@ void EdgeDetector::detectEdges(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &input_clo
   marker_msg.type = visualization_msgs::Marker::LINE_LIST;
   marker_msg.action = visualization_msgs::Marker::ADD;
   marker_msg.pose.orientation.w = 1.0;
-  marker_msg.scale.x = 0.01;
+  marker_msg.scale.x = 0.03;
   marker_msg.color.r = 1.0;
   marker_msg.color.g = 0.0;
   marker_msg.color.b = 0.0;
   marker_msg.color.a = 1.0;
 
-  geometry_msgs::Point p1;
-  p1.x = coefficients->values[0];
-  p1.y = coefficients->values[1];
-  p1.z = coefficients->values[2];
-  geometry_msgs::Point p2;
-  p2.x = coefficients->values[0] + coefficients->values[3];
-  p2.y = coefficients->values[1] + coefficients->values[4];
-  p2.z = coefficients->values[2] + coefficients->values[5];
-  marker_msg.points.push_back(p1);
-  marker_msg.points.push_back(p2);
+  double t = 2.0;
+  Eigen::Vector3d p1(coefficients->values[0] - t * coefficients->values[3],
+                      coefficients->values[1] - t * coefficients->values[4],
+                      coefficients->values[2] - t * coefficients->values[5]);
+  Eigen::Vector3d p2(coefficients->values[0] + t * coefficients->values[3],
+                      coefficients->values[1] + t * coefficients->values[4],
+                      coefficients->values[2] + t * coefficients->values[5]);
+
+  geometry_msgs::Point p1_msg;
+  p1_msg.x = p1[0];
+  p1_msg.y = p1[1];
+  p1_msg.z = p1[2];
+
+  geometry_msgs::Point p2_msg;
+  p2_msg.x = p2[0];
+  p2_msg.y = p2[1];
+  p2_msg.z = p2[2];
+  
+  marker_msg.points.push_back(p1_msg);
+  marker_msg.points.push_back(p2_msg);
 
   // Publish the marker
   pub_marker_.publish(marker_msg);
