@@ -5,6 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
+        - /PointCloud21
       Splitter Ratio: 0.5
     Tree Height: 755
   - Class: rviz/Selection
@@ -107,12 +108,20 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.009999999776482582
-      Style: Flat Squares
+      Size (m): 0.019999999552965164
+      Style: Spheres
       Topic: /edge_detector/debug_point_cloud
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /edge_detector/detected_line
+      Name: Marker
+      Namespaces:
+        edge: true
+      Queue Size: 100
       Value: true
   Enabled: true
   Global Options:
@@ -142,7 +151,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 7.2022624015808105
+      Distance: 8.77619743347168
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -157,10 +166,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.3803984224796295
+      Pitch: 0.5203984975814819
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.715407371520996
+      Yaw: 3.765409231185913
     Saved: ~
 Window Geometry:
   Displays:
