@@ -8,13 +8,20 @@ int main(int argc, char** argv)
 
   // Create a ROS node handle
   ros::NodeHandle nh;
+  edge_detector::EdgeDetector edge_detector(nh);
 
   // TODO: Add your code here
   ROS_INFO("[EdgeDetectorNode] Starting node");
 
+  ros::Rate loop_rate(10);
   // Spin the ROS node
-  ros::spinOnce();
 
+  while (ros::ok())
+  {
+    ros::spinOnce();
+    loop_rate.sleep();
+  }
+  
   ROS_INFO("[EdgeDetectorNode] Ending node");
 
   return 0;
