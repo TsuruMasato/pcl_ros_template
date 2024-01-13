@@ -2,6 +2,9 @@
 
 ROS node to extract environmental edge in 3D Point Cloud.
 
+![Screenshot from 2024-01-13 18-28-42](https://github.com/Osaka-University-Harada-Laboratory/edge_detector_ros/assets/14979823/d50d51e8-ec89-4da3-85b9-b483f2156d56)
+
+
 ## How to compile
 
 1. `$ cd your_catkin_ws/src`
