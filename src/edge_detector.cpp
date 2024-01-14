@@ -22,7 +22,8 @@ EdgeDetector::EdgeDetector(ros::NodeHandle& nh)
 
 void EdgeDetector::main_callback(const sensor_msgs::PointCloud2ConstPtr& input_msg)
 {
-  ROS_INFO("[EdgeDetector] main_callback called");
+  // ROS_INFO("[EdgeDetector] main_callback called");
+  ros::Time t_start = ros::Time::now();
 
   /* convert ros communication message to PCL point cloud */
   frame_id_ = input_msg->header.frame_id;
@@ -30,14 +31,17 @@ void EdgeDetector::main_callback(const sensor_msgs::PointCloud2ConstPtr& input_m
   pcl::fromROSMsg(*input_msg, *input_cloud);
 
   detectEdges(input_cloud);
+
+  ros::Time t_end = ros::Time::now();
+  ROS_INFO_STREAM("Computation time[s] = " << (t_end - t_start).toSec());
 }
 
 void EdgeDetector::detectEdges(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &input_cloud)
 {
-  ROS_INFO("[EdgeDetector] detectEdges called");
+  // ROS_INFO("[EdgeDetector] detectEdges called");
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr line_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
   *filtered_cloud = *input_cloud;
 
   if(use_voxel_grid_filter_)
@@ -56,7 +60,7 @@ void EdgeDetector::detectEdges(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &input_clo
   // Optional
   RANSAC_segmentation.setOptimizeCoefficients(true);
   // Mandatory
-  RANSAC_segmentation.setModelType(pcl::SACMODEL_LINE);
+  RANSAC_segmentation.setModelType(pcl::SACMODEL_PLANE);
   RANSAC_segmentation.setMethodType(pcl::SAC_RANSAC);
   RANSAC_segmentation.setDistanceThreshold(0.01);
 
@@ -64,15 +68,26 @@ void EdgeDetector::detectEdges(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &input_clo
   RANSAC_segmentation.segment(*inliers, *coefficients);
 
   pcl::ExtractIndices<pcl::PointXYZRGB> extract;
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+  // pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
   extract.setInputCloud(filtered_cloud);
   extract.setIndices(inliers);
   extract.setNegative(false);
-  extract.filter(*line_cloud);
+  extract.filter(*plane_cloud);
 
-  for(auto coeff = coefficients->values.begin(); coeff != coefficients->values.end(); coeff++)
+  // for(auto coeff = coefficients->values.begin(); coeff != coefficients->values.end(); coeff++)
+  // {
+  //   ROS_INFO_STREAM("[EdgeDetector] coefficients: " << *coeff);
+  // }
+
+  Eigen::Vector4f xyz_centroid;
+  if(pcl::compute3DCentroid(*plane_cloud, xyz_centroid))
   {
-    ROS_INFO_STREAM("[EdgeDetector] coefficients: " << *coeff);
+    ROS_INFO_STREAM("[EdgeDetector] Centroid: " << xyz_centroid.transpose());
+  }
+  else
+  {
+    ROS_ERROR("[EdgeDetector] Centroid calculation failed");
+    return;
   }
 
   // Visualize the 3D Line
@@ -81,39 +96,42 @@ void EdgeDetector::detectEdges(pcl::PointCloud<pcl::PointXYZRGB>::Ptr &input_clo
   marker_msg.header.stamp = ros::Time::now();
   marker_msg.ns = "edge";
   marker_msg.id = 0;
-  marker_msg.type = visualization_msgs::Marker::LINE_LIST;
+  marker_msg.type = visualization_msgs::Marker::CUBE;
   marker_msg.action = visualization_msgs::Marker::ADD;
-  marker_msg.pose.orientation.w = 1.0;
-  marker_msg.scale.x = 0.03;
+  
+  marker_msg.pose.position.x = xyz_centroid.x();
+  marker_msg.pose.position.y = xyz_centroid.y();
+  marker_msg.pose.position.z = xyz_centroid.z();
+
+  /* generate quaterninon from Normal vector of plane */
+  Eigen::Vector3f normal_vector(coefficients->values[0], coefficients->values[1], coefficients->values[2]);
+  normal_vector.normalize();
+  Eigen::Vector3f z_axis(0, 0, 1);
+  Eigen::Vector3f rotation_axis = normal_vector.cross(z_axis);
+  if (rotation_axis.norm() < 1e-6) {
+    std::runtime_error("[EdgeDetector] rotation_axis is zero vector");
+    return;
+  }
+  rotation_axis.normalize();
+  double rotation_angle = acos(normal_vector.dot(z_axis)); // 正規化されたベクトル間の角度
+  Eigen::Quaternionf rotation_quaternion(Eigen::AngleAxisf(-rotation_angle, rotation_axis));
+  
+  marker_msg.pose.orientation.x = rotation_quaternion.x();
+  marker_msg.pose.orientation.y = rotation_quaternion.y();
+  marker_msg.pose.orientation.z = rotation_quaternion.z();
+  marker_msg.pose.orientation.w = rotation_quaternion.w();
+
+  marker_msg.scale.x = 1;
+  marker_msg.scale.y = 1;
+  marker_msg.scale.z = 0.03;
   marker_msg.color.r = 1.0;
   marker_msg.color.g = 0.0;
   marker_msg.color.b = 0.0;
   marker_msg.color.a = 1.0;
 
-  double t = 2.0;
-  Eigen::Vector3d p1(coefficients->values[0] - t * coefficients->values[3],
-                      coefficients->values[1] - t * coefficients->values[4],
-                      coefficients->values[2] - t * coefficients->values[5]);
-  Eigen::Vector3d p2(coefficients->values[0] + t * coefficients->values[3],
-                      coefficients->values[1] + t * coefficients->values[4],
-                      coefficients->values[2] + t * coefficients->values[5]);
-
-  geometry_msgs::Point p1_msg;
-  p1_msg.x = p1[0];
-  p1_msg.y = p1[1];
-  p1_msg.z = p1[2];
-
-  geometry_msgs::Point p2_msg;
-  p2_msg.x = p2[0];
-  p2_msg.y = p2[1];
-  p2_msg.z = p2[2];
-  
-  marker_msg.points.push_back(p1_msg);
-  marker_msg.points.push_back(p2_msg);
-
   // Publish the marker
   pub_marker_.publish(marker_msg);
-  pub_point_cloud_.publish(filtered_cloud);
+  pub_point_cloud_.publish(plane_cloud);
 }
 
 } // namespace edge_detector
